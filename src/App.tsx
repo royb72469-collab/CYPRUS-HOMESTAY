@@ -187,7 +187,7 @@ export default function App() {
       maxGuests: '2 Adults + 1 Child',
       beds: '1 Double Bed',
       description: 'Wooden flooring & wood-paneled ceilings with ceiling fan, large wooden wardrobe, bedside table, attached western bathroom, and natural light window overlooking greenery.',
-      image: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.30_PM__2__d1613e8d.jpeg',
+      image: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.30_PM__2__d1613e8d.jpeg',
       features: ['Wooden Ceilings', 'Attached Western Bathroom', 'Large Wooden Wardrobe', 'Natural Light Window', 'Ceiling Fan', 'Free Gated Parking']
     },
     {
@@ -197,22 +197,22 @@ export default function App() {
       maxGuests: '2 Adults',
       beds: '2 Single Beds',
       description: 'Ideal for friends, solo travelers, or biker groups. Features warm wooden flooring & ceiling, center nightstand, attached western bathroom, and cozy plush bedding.',
-      image: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.31_PM_2acdee74.jpeg',
+      image: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.31_PM_2acdee74.jpeg',
       features: ['2 Single Beds', 'Attached Western Bathroom', 'Center Nightstand', 'Wooden Flooring', 'Ceiling Fan', 'Secure Biker Parking']
     }
   ];
 
   // Gallery images with categories
   const galleryItems = [
-    { id: 1, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.34_PM_da529e97.jpeg', category: 'Exterior & Parking', title: 'Homestay Exterior & Balcony Lounge' },
-    { id: 2, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.33_PM_b354ea1e.jpeg', category: 'Dining & Balcony', title: 'Upper-Level Wooden Dining & Balcony' },
-    { id: 3, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.32_PM__1__e6d00f31.jpeg', category: 'Bathroom', title: 'Clean Attached Western Bathroom' },
-    { id: 4, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.32_PM_ca6306d0.jpeg', category: 'Dining & Balcony', title: 'Dining Area with Scenic Greenery View' },
-    { id: 5, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.31_PM_2acdee74.jpeg', category: 'Rooms & Beds', title: 'Twin Sharing Room with Wooden Ceiling' },
-    { id: 6, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.30_PM__2__d1613e8d.jpeg', category: 'Rooms & Beds', title: 'Cozy Double Bedroom with Wardrobe' },
-    { id: 7, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.30_PM__1__2e2ade22.jpeg', category: 'Rooms & Beds', title: 'Double Bedroom Window View' },
-    { id: 8, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.29_PM__1__fdf74cb9.jpeg', category: 'Dining & Balcony', title: 'Balcony Lounge Seating' },
-    { id: 9, url: '/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.29_PM_0caef206.jpeg', category: 'Exterior & Parking', title: 'Gated Parking for Bikes & Cars' },
+    { id: 1, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.34_PM_da529e97.jpeg', category: 'Exterior & Parking', title: 'Homestay Exterior & Balcony Lounge' },
+    { id: 2, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.33_PM_b354ea1e.jpeg', category: 'Dining & Balcony', title: 'Upper-Level Wooden Dining & Balcony' },
+    { id: 3, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.32_PM__1__e6d00f31.jpeg', category: 'Bathroom', title: 'Clean Attached Western Bathroom' },
+    { id: 4, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.32_PM_ca6306d0.jpeg', category: 'Dining & Balcony', title: 'Dining Area with Scenic Greenery View' },
+    { id: 5, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.31_PM_2acdee74.jpeg', category: 'Rooms & Beds', title: 'Twin Sharing Room with Wooden Ceiling' },
+    { id: 6, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.30_PM__2__d1613e8d.jpeg', category: 'Rooms & Beds', title: 'Cozy Double Bedroom with Wardrobe' },
+    { id: 7, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.30_PM__1__2e2ade22.jpeg', category: 'Rooms & Beds', title: 'Double Bedroom Window View' },
+    { id: 8, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.29_PM__1__fdf74cb9.jpeg', category: 'Dining & Balcony', title: 'Balcony Lounge Seating' },
+    { id: 9, url: '/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.29_PM_0caef206.jpeg', category: 'Exterior & Parking', title: 'Gated Parking for Bikes & Cars' },
   ];
 
   // Booking Form State
@@ -498,7 +498,7 @@ export default function App() {
       <section id="home" className="relative bg-emerald-950 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-40 mix-blend-overlay">
           <img 
-            src="/public/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.34_PM_da529e97.jpeg" 
+            src="/assets/aistudio/WhatsApp_Image_2026-11-12_at_9.55.34_PM_da529e97.jpeg" 
             alt="Cyprus Homestay Exterior" 
             className="w-full h-full object-cover scale-105"
           />
