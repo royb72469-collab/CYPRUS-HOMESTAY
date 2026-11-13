@@ -1,6 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://epmdbvwqdxgazlzauzyt.supabase.co';
-const supabaseKey = 'sb_secret_k-bYYSiw704-ZgsD0irCqg_OPhxjYxD';
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL || 'https://epmdbvwqdxgazlzauzyt.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const isSupabaseConfigured = Boolean(
+  supabaseUrl && supabaseAnonKey && !supabaseAnonKey.startsWith('sb_secret_')
+);
+
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;

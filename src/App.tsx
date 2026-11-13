@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Bed, Utensils, ShieldCheck, Car, Trees, Bath, Calendar, Users, Phone, MapPin, 
   Clock, CheckCircle, Copy, ChevronRight, Heart, Menu, X, 
-  Info, Sparkles, MessageCircle, ArrowRight, DollarSign, Star, ThumbsUp, MessageSquarePlus
+  Info, Sparkles, MessageCircle, ArrowRight, DollarSign, Star, ThumbsUp, MessageSquarePlus,
+  Download, MessageSquare
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
@@ -50,7 +51,7 @@ interface BookingDetails {
   utrNumber: string;
   paymentScreenshot?: string;
   createdAt: string;
-  status: 'Pending Owner Verification' | 'Confirmed';
+  status: 'Sent to Owner (Pending Confirmation)' | 'Pending Owner Verification' | 'Confirmed';
 }
 
 export default function App() {
@@ -152,21 +153,21 @@ export default function App() {
   const [newAuthor, setNewAuthor] = useState('');
   const [newRating, setNewRating] = useState(5);
   const [newReviewText, setNewReviewText] = useState('');
+  const [reviewNotice, setReviewNotice] = useState<string | null>(null);
 
   const handleAddReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAuthor || !newReviewText) {
-      alert('Please provide your name and review comment.');
+    if (!newAuthor.trim() || !newReviewText.trim()) {
       return;
     }
 
     const newEntry: Review = {
       id: Date.now().toString(),
-      author: newAuthor,
+      author: newAuthor.trim(),
       role: 'Verified Guest',
       rating: newRating,
       date: 'Just now',
-      text: newReviewText,
+      text: newReviewText.trim(),
       likes: 0,
       ownerReply: 'Thank you so much for your wonderful review! We are delighted you enjoyed your stay at Cyprus Homestay. 😊🙏'
     };
@@ -175,7 +176,8 @@ export default function App() {
     setNewAuthor('');
     setNewReviewText('');
     setShowReviewModal(false);
-    alert('Thank you! Your review has been published successfully.');
+    setReviewNotice('Thank you! Your review has been published.');
+    setTimeout(() => setReviewNotice(null), 4000);
   };
 
   // Room data with uploaded images
@@ -229,16 +231,19 @@ export default function App() {
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [city, setCity] = useState('');
-  const [arrivalTime, setArrivalTime] = useState('02:00 PM');
+  const [arrivalTime, setArrivalTime] = useState('12:00 PM - 02:00 PM');
   const [parking, setParking] = useState('Car Parking Required');
   const [mealPref, setMealPref] = useState('Home-cooked Veg Meals');
   const [paymentMode, setPaymentMode] = useState<'full' | 'advance'>('advance');
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Modal State for Payment & Receipt
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [utrNumber, setUtrNumber] = useState('');
-  const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedOwnerMsg, setCopiedOwnerMsg] = useState(false);
+  const [copiedBookingMsg, setCopiedBookingMsg] = useState(false);
+  const [ownerNotified, setOwnerNotified] = useState(false);
+  const [customerNotified, setCustomerNotified] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<BookingDetails | null>(null);
 
   // Calculate nights
@@ -282,20 +287,51 @@ export default function App() {
     setTimeout(() => setCopiedUpi(false), 3000);
   };
 
+  const validateBookingForm = () => {
+    if (!fullName.trim() || !mobile.trim() || !city.trim()) {
+      setBookingError('Please fill in your Full Name, Mobile Number, and Home City before continuing.');
+      return false;
+    }
+    setBookingError(null);
+    return true;
+  };
+
   const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !mobile || !city) {
-      alert('Please fill in your Full Name, Mobile Number, and City.');
-      return;
-    }
+    if (!validateBookingForm()) return;
     setShowPaymentModal(true);
   };
 
-  const handleSubmitFinalBooking = async () => {
-    if (!utrNumber || utrNumber.length < 8) {
-      alert('Please enter a valid 12-digit UPI Transaction ID (UTR Number).');
-      return;
-    }
+  const buildBookingInquiryMessage = () => {
+    return `Hello Cyprus Homestay! I would like to book a room:\n\n*Guest Name:* ${fullName}\n*Mobile:* ${mobile}\n*City:* ${city}\n*Check-in:* ${checkIn}\n*Check-out:* ${checkOut} (${nights} Night${nights > 1 ? 's' : ''})\n*Room:* ${roomType} (${roomCount} Room${roomCount > 1 ? 's' : ''})\n*Guests:* ${adults} Adult(s), ${children} Child(ren)\n*Arrival Time:* ${arrivalTime}\n*Parking:* ${parking}\n*Meal Pref:* ${mealPref}\n*Total Stay Amount:* ₹${totalAmount.toLocaleString()}\n*Selected Payment:* ${paymentMode === 'full' ? `Full Payment (₹${payableAmount.toLocaleString()})` : `30% Advance (₹${payableAmount.toLocaleString()})`}\n\nPlease confirm availability!`;
+  };
+
+  const handleSendBookingWhatsApp = () => {
+    if (!validateBookingForm()) return;
+    const msg = buildBookingInquiryMessage();
+    window.open(`https://wa.me/919876543210?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleSendBookingSMS = () => {
+    if (!validateBookingForm()) return;
+    const msg = buildBookingInquiryMessage().replace(/\*/g, '');
+    window.location.href = `sms:+919876543210?body=${encodeURIComponent(msg)}`;
+  };
+
+  const formatPhoneForWhatsApp = (rawPhone: string) => {
+    const digits = rawPhone.replace(/\D/g, '');
+    if (digits.length === 10) return `91${digits}`;
+    return digits;
+  };
+
+  const formatPhoneForSMS = (rawPhone: string) => {
+    const digits = rawPhone.replace(/\D/g, '');
+    if (digits.length === 10) return `+91${digits}`;
+    return rawPhone.startsWith('+') ? rawPhone : `+${digits}`;
+  };
+
+  const handleDirectBookingConfirm = async (source: 'qr' | 'direct') => {
+    if (!validateBookingForm()) return;
 
     const newBooking: BookingDetails = {
       bookingId: `#CYP-${newDateString()}`,
@@ -306,58 +342,63 @@ export default function App() {
       roomCount,
       adults,
       children,
-      fullName,
-      mobile,
-      email,
-      city,
+      fullName: fullName.trim(),
+      mobile: mobile.trim(),
+      email: email.trim(),
+      city: city.trim(),
       arrivalTime,
       parking,
       mealPref,
       paymentMode,
       totalAmount,
       payableAmount,
-      utrNumber,
-      paymentScreenshot: paymentScreenshot || undefined,
+      utrNumber: source === 'qr' ? 'UPI-QR-PAID' : 'PAY-AT-HOMESTAY',
       createdAt: new Date().toISOString(),
-      status: 'Pending Owner Verification'
+      status: 'Sent to Owner (Pending Confirmation)'
     };
 
-    // Save booking to Supabase
+    // Persist booking locally so confirmation always succeeds
     try {
-      const { error } = await supabase.from('bookings').insert([
-        {
-          booking_id: newBooking.bookingId,
-          check_in: newBooking.checkIn,
-          check_out: newBooking.checkOut,
-          nights: newBooking.nights,
-          room_type: newBooking.roomType,
-          room_count: newBooking.roomCount,
-          adults: newBooking.adults,
-          children: newBooking.children,
-          full_name: newBooking.fullName,
-          mobile: newBooking.mobile,
-          email: newBooking.email,
-          city: newBooking.city,
-          arrival_time: newBooking.arrivalTime,
-          parking: newBooking.parking,
-          meal_pref: newBooking.mealPref,
-          payment_mode: newBooking.paymentMode,
-          total_amount: newBooking.totalAmount,
-          payable_amount: newBooking.payableAmount,
-          utr_number: newBooking.utrNumber,
-          status: newBooking.status
-        }
-      ]);
-
-      if (error) {
-        console.error('Supabase booking save error:', error.message);
-      } else {
-        console.log('Booking successfully saved to Supabase project: epmdbvwqdxgazlzauzyt');
-      }
-    } catch (err) {
-      console.error('Supabase exception:', err);
+      const existing = JSON.parse(localStorage.getItem('cyprus_homestay_bookings') || '[]');
+      localStorage.setItem('cyprus_homestay_bookings', JSON.stringify([newBooking, ...existing]));
+    } catch {
+      // Ignore storage quota errors
     }
 
+    // Sync booking to Supabase when a valid publishable/anon key is configured
+    if (supabase) {
+      try {
+        await supabase.from('bookings').insert([
+          {
+            booking_id: newBooking.bookingId,
+            check_in: newBooking.checkIn,
+            check_out: newBooking.checkOut,
+            nights: newBooking.nights,
+            room_type: newBooking.roomType,
+            room_count: newBooking.roomCount,
+            adults: newBooking.adults,
+            children: newBooking.children,
+            full_name: newBooking.fullName,
+            mobile: newBooking.mobile,
+            email: newBooking.email,
+            city: newBooking.city,
+            arrival_time: newBooking.arrivalTime,
+            parking: newBooking.parking,
+            meal_pref: newBooking.mealPref,
+            payment_mode: newBooking.paymentMode,
+            total_amount: newBooking.totalAmount,
+            payable_amount: newBooking.payableAmount,
+            utr_number: newBooking.utrNumber,
+            status: newBooking.status
+          }
+        ]);
+      } catch {
+        // Local persistence already succeeded
+      }
+    }
+
+    setOwnerNotified(false);
+    setCustomerNotified(false);
     setConfirmedBooking(newBooking);
     setShowPaymentModal(false);
   };
@@ -367,10 +408,45 @@ export default function App() {
     return `2026-${randomNum}`;
   };
 
-  const handleSendWhatsApp = () => {
+  const buildCustomerConfirmationMessage = (booking: BookingDetails) => {
+    const totalGuests = booking.adults + booking.children;
+    const guestBreakdown =
+      booking.children > 0
+        ? `${totalGuests} Guest(s) (${booking.adults} Adult(s), ${booking.children} Child(ren))`
+        : `${booking.adults} Guest(s)`;
+    const paymentLabel =
+      booking.utrNumber === 'PAY-AT-HOMESTAY'
+        ? `Pay at Homestay (Total: ₹${booking.totalAmount.toLocaleString()})`
+        : `₹${booking.payableAmount.toLocaleString()} (${booking.paymentMode === 'full' ? 'Full Payment' : '30% Advance'} via UPI QR)`;
+
+    return `Dear ${booking.fullName},\n\nThank you for your booking with *Cyprus Homestay*!\n\nYou have booked *${booking.roomType} × ${booking.roomCount}* for *${guestBreakdown}* from *${booking.checkIn}* to *${booking.checkOut}* (${booking.nights} Night${booking.nights > 1 ? 's' : ''}).\n\n*Booking ID:* ${booking.bookingId}\n*Total Stay Amount:* ₹${booking.totalAmount.toLocaleString()}\n*Payment:* ${paymentLabel}\n\nYour booking & payment details have been sent to the owner. *The owner will check and confirm your booking shortly!*\n\nHomestay Contact: +91 98765 43210\nAddress: Green Valley Foothills, Scenic Nature Trail Road, Cyprus Homestay`;
+  };
+
+  const buildOwnerNotificationMessage = (booking: BookingDetails) => {
+    const paymentStatus =
+      booking.utrNumber === 'PAY-AT-HOMESTAY'
+        ? `Pay at Homestay (Total: ₹${booking.totalAmount.toLocaleString()})`
+        : `₹${booking.payableAmount.toLocaleString()} PAID via UPI QR (${booking.paymentMode === 'full' ? 'Full Payment' : '30% Advance'})`;
+
+    return `New Payment & Customer Booking Details — Cyprus Homestay!\n\n*Booking ID:* ${booking.bookingId}\n*Status:* Sent to Owner — Please Check & Confirm\n\n*Customer Details:*\n• Name: ${booking.fullName}\n• Mobile: ${booking.mobile}\n• City: ${booking.city}${booking.email ? `\n• Email: ${booking.email}` : ''}\n\n*Room & Guest Details:*\n• Room: ${booking.roomType} × ${booking.roomCount}\n• Guests: ${booking.adults} Adult(s), ${booking.children} Child(ren)\n• Check-in: ${booking.checkIn}\n• Check-out: ${booking.checkOut} (${booking.nights} Night${booking.nights > 1 ? 's' : ''})\n• Arrival: ${booking.arrivalTime}\n• Parking: ${booking.parking}\n• Meals: ${booking.mealPref}\n\n*Payment Details:*\n• Total Stay Amount: ₹${booking.totalAmount.toLocaleString()}\n• Payment Received: ${paymentStatus}\n\nPlease verify the payment and confirm the customer's booking!`;
+  };
+
+  const handleCopyOwnerMessage = () => {
     if (!confirmedBooking) return;
-    const msg = `Hello Cyprus Homestay! I have submitted a pre-booking:\n\n*Booking ID:* ${confirmedBooking.bookingId}\n*Name:* ${confirmedBooking.fullName}\n*Dates:* ${confirmedBooking.checkIn} to ${confirmedBooking.checkOut} (${confirmedBooking.nights} Nights)\n*Room:* ${confirmedBooking.roomType} (${confirmedBooking.roomCount} Room/s)\n*Guests:* ${confirmedBooking.adults} Adults, ${confirmedBooking.children} Children\n*Parking:* ${confirmedBooking.parking}\n*UTR/Transaction ID:* ${confirmedBooking.utrNumber}\n*Paid Amount:* ₹${confirmedBooking.payableAmount} (${confirmedBooking.paymentMode === 'full' ? 'Full Payment' : '30% Advance'})\n\nPlease confirm my booking!`;
-    window.open(`https://wa.me/919876543210?text=${encodeURIComponent(msg)}`, '_blank');
+    const msg = buildOwnerNotificationMessage(confirmedBooking).replace(/\*/g, '');
+    navigator.clipboard.writeText(msg);
+    setCopiedOwnerMsg(true);
+    setOwnerNotified(true);
+    setTimeout(() => setCopiedOwnerMsg(false), 3000);
+  };
+
+  const handleCopyBookingMessage = () => {
+    if (!confirmedBooking) return;
+    const msg = buildCustomerConfirmationMessage(confirmedBooking).replace(/\*/g, '');
+    navigator.clipboard.writeText(msg);
+    setCopiedBookingMsg(true);
+    setCustomerNotified(true);
+    setTimeout(() => setCopiedBookingMsg(false), 3000);
   };
 
   const filteredGallery = activeTab === 'All' 
@@ -813,6 +889,13 @@ export default function App() {
             </button>
           </div>
 
+          {reviewNotice && (
+            <div className="mb-8 bg-emerald-50 border border-emerald-200 text-emerald-900 px-5 py-3.5 rounded-2xl text-sm font-medium flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>{reviewNotice}</span>
+            </div>
+          )}
+
           {/* Review Summary Card */}
           <div className="bg-white rounded-3xl p-8 shadow-md border border-stone-200 mb-12">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-center">
@@ -1014,29 +1097,29 @@ export default function App() {
               </div>
               <div className="relative z-10">
                 <span className="bg-emerald-800 text-emerald-200 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-700">
-                  Secure Pre-Booking (Supabase Connected)
+                  UPI QR Payment & Booking
                 </span>
                 <h2 className="text-3xl sm:text-4xl font-serif font-bold mt-3">
-                  Check Availability & Pre-Book Room
+                  Check Availability & Book Room
                 </h2>
-                <p className="text-emerald-100 mt-2 max-w-xl">
-                  Fill in your details below to instantly calculate your stay and securely sync your appointment details to Supabase.
+                <p className="text-emerald-100 mt-2 max-w-2xl">
+                  1. Pay via UPI QR &rarr; 2. Payment &amp; guest details go to the Owner &rarr; 3. Customer receives room booking status while the owner verifies &amp; confirms.
                 </p>
               </div>
             </div>
 
-            {/* Confirmed Booking Banner or Form */}
+            {/* Post-Payment 2-Step Notification Receipt or Form */}
             {confirmedBooking ? (
               <div className="p-8 sm:p-12 text-center space-y-6">
-                <div className="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <div className="w-20 h-20 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto shadow-inner">
                   <CheckCircle className="w-10 h-10" />
                 </div>
                 <div>
-                  <span className="bg-amber-100 text-amber-800 px-3.5 py-1 rounded-full text-xs font-semibold uppercase">
+                  <span className="bg-amber-100 text-amber-900 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-300">
                     {confirmedBooking.status}
                   </span>
                   <h3 className="text-3xl font-serif font-bold text-stone-900 mt-3">
-                    Pre-Booking Saved to Supabase!
+                    Payment Submitted — Send Messages
                   </h3>
                   <p className="text-stone-600 mt-1">
                     Booking Reference ID: <strong className="text-emerald-800 font-mono text-lg">{confirmedBooking.bookingId}</strong>
@@ -1054,37 +1137,155 @@ export default function App() {
                   </div>
                   <div className="flex justify-between border-b border-stone-200 pb-2">
                     <span className="text-stone-500">Dates:</span>
-                    <span className="font-semibold text-stone-900">{confirmedBooking.checkIn} to {confirmedBooking.checkOut} ({confirmedBooking.nights} Nights)</span>
+                    <span className="font-semibold text-stone-900">{confirmedBooking.checkIn} to {confirmedBooking.checkOut} ({confirmedBooking.nights} Night{confirmedBooking.nights > 1 ? 's' : ''})</span>
                   </div>
                   <div className="flex justify-between border-b border-stone-200 pb-2">
-                    <span className="text-stone-500">Room & Count:</span>
-                    <span className="font-semibold text-stone-900">{confirmedBooking.roomType} × {confirmedBooking.roomCount}</span>
+                    <span className="text-stone-500">Room &amp; Guests:</span>
+                    <span className="font-semibold text-stone-900 text-right">
+                      {confirmedBooking.roomType} × {confirmedBooking.roomCount} ({confirmedBooking.adults} Adult{confirmedBooking.adults > 1 ? 's' : ''}{confirmedBooking.children > 0 ? `, ${confirmedBooking.children} Child` : ''})
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-stone-200 pb-2">
                     <span className="text-stone-500">Parking Needed:</span>
                     <span className="font-semibold text-stone-900">{confirmedBooking.parking}</span>
                   </div>
-                  <div className="flex justify-between border-b border-stone-200 pb-2">
-                    <span className="text-stone-500">UTR / Transaction ID:</span>
-                    <span className="font-mono font-semibold text-emerald-700">{confirmedBooking.utrNumber}</span>
-                  </div>
                   <div className="flex justify-between pt-1">
-                    <span className="text-stone-500">Amount Paid ({confirmedBooking.paymentMode === 'full' ? 'Full' : '30% Advance'}):</span>
-                    <span className="font-bold text-emerald-800 text-lg">₹{confirmedBooking.payableAmount.toLocaleString()}</span>
+                    <span className="text-stone-500">
+                      {confirmedBooking.utrNumber === 'PAY-AT-HOMESTAY'
+                        ? 'Total Amount (Pay at Homestay):'
+                        : `Payment (${confirmedBooking.paymentMode === 'full' ? 'Full' : '30% Advance'} via UPI QR):`}
+                    </span>
+                    <span className="font-bold text-emerald-800 text-lg">
+                      ₹{(confirmedBooking.utrNumber === 'PAY-AT-HOMESTAY' ? confirmedBooking.totalAmount : confirmedBooking.payableAmount).toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                  <button 
-                    onClick={handleSendWhatsApp}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 px-8 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span>Send Confirmation on WhatsApp</span>
-                  </button>
-                  <button 
-                    onClick={() => setConfirmedBooking(null)}
-                    className="bg-stone-200 hover:bg-stone-300 text-stone-800 font-semibold py-3.5 px-6 rounded-xl transition-all"
+                {/* Step 1: Send Payment & Customer Details to Owner */}
+                <div className={`max-w-2xl mx-auto rounded-2xl p-6 space-y-4 text-left border-2 transition-all ${
+                  ownerNotified
+                    ? 'bg-emerald-50/70 border-emerald-300'
+                    : 'bg-amber-50 border-amber-300 shadow-sm'
+                }`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${
+                      ownerNotified
+                        ? 'bg-emerald-200 text-emerald-900'
+                        : 'bg-amber-200 text-amber-950'
+                    }`}>
+                      {ownerNotified ? 'Step 1 · Sent to Owner ✓' : 'Step 1 · First Send to Owner'}
+                    </span>
+                    <span className="text-xs font-mono text-stone-600">Owner: +91 98765 43210</span>
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-bold text-lg text-stone-900">
+                      Send Payment &amp; Customer Details to Owner
+                    </h4>
+                    <p className="text-xs text-stone-600 mt-1">
+                      Send the guest&apos;s payment amount, room, dates, and contact details to the homestay owner for verification.
+                    </p>
+                  </div>
+                  <div className="bg-white/90 border border-stone-200 rounded-xl p-3.5 text-xs text-stone-700 whitespace-pre-line font-sans leading-relaxed max-h-44 overflow-y-auto">
+                    {buildOwnerNotificationMessage(confirmedBooking).replace(/\*/g, '')}
+                  </div>
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                    <a
+                      href={`https://wa.me/919876543210?text=${encodeURIComponent(buildOwnerNotificationMessage(confirmedBooking))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setOwnerNotified(true)}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 px-5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all text-sm"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Send Payment Details to Owner (WhatsApp)</span>
+                    </a>
+                    <a
+                      href={`sms:+919876543210?body=${encodeURIComponent(buildOwnerNotificationMessage(confirmedBooking).replace(/\*/g, ''))}`}
+                      onClick={() => setOwnerNotified(true)}
+                      className="bg-stone-800 hover:bg-stone-900 text-white font-semibold py-3 px-5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all text-sm"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>SMS Owner</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleCopyOwnerMessage}
+                      className="bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-sm"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>{copiedOwnerMsg ? 'Copied!' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step 2: Send Booking Status Message to Customer */}
+                <div className={`max-w-2xl mx-auto rounded-2xl p-6 space-y-4 text-left border-2 transition-all ${
+                  customerNotified
+                    ? 'bg-emerald-50 border-emerald-400'
+                    : ownerNotified
+                      ? 'bg-emerald-50 border-emerald-500 shadow-md'
+                      : 'bg-stone-50 border-stone-200'
+                }`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${
+                      customerNotified
+                        ? 'bg-emerald-200 text-emerald-900'
+                        : 'bg-emerald-100 text-emerald-900'
+                    }`}>
+                      {customerNotified ? 'Step 2 · Sent to Customer ✓' : 'Step 2 · Then Send to Customer'}
+                    </span>
+                    <span className="text-xs font-mono text-stone-600">Customer: {confirmedBooking.mobile}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-bold text-lg text-emerald-950">
+                      Send Booking Status Message to Customer
+                    </h4>
+                    <p className="text-xs text-emerald-800 mt-1">
+                      Inform <strong>{confirmedBooking.fullName}</strong> which room(s) were booked for how many guests, and that the owner will check and confirm their booking.
+                    </p>
+                  </div>
+                  <div className="bg-white/90 border border-emerald-200 rounded-xl p-3.5 text-xs text-stone-700 whitespace-pre-line font-sans leading-relaxed max-h-44 overflow-y-auto">
+                    {buildCustomerConfirmationMessage(confirmedBooking).replace(/\*/g, '')}
+                  </div>
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                    <a
+                      href={`https://wa.me/${formatPhoneForWhatsApp(confirmedBooking.mobile)}?text=${encodeURIComponent(buildCustomerConfirmationMessage(confirmedBooking))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setCustomerNotified(true)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all text-sm"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>WhatsApp to Customer</span>
+                    </a>
+                    <a
+                      href={`sms:${formatPhoneForSMS(confirmedBooking.mobile)}?body=${encodeURIComponent(buildCustomerConfirmationMessage(confirmedBooking).replace(/\*/g, ''))}`}
+                      onClick={() => setCustomerNotified(true)}
+                      className="bg-amber-700 hover:bg-amber-800 text-white font-semibold py-3 px-5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all text-sm"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>SMS to Customer</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleCopyBookingMessage}
+                      className="bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-sm"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>{copiedBookingMsg ? 'Copied!' : 'Copy Message'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmedBooking(null);
+                      setOwnerNotified(false);
+                      setCustomerNotified(false);
+                    }}
+                    className="bg-stone-200 hover:bg-stone-300 text-stone-800 text-sm font-semibold py-2.5 px-6 rounded-xl transition-all"
                   >
                     Make Another Booking
                   </button>
@@ -1352,18 +1553,52 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-white/80 p-4 rounded-xl flex items-center justify-between border border-emerald-200">
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Amount Payable Now</p>
-                        <p className="text-2xl font-serif font-bold text-emerald-900">₹{payableAmount.toLocaleString()}</p>
+                    {bookingError && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
+                        {bookingError}
                       </div>
-                      <button 
-                        type="submit"
-                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-all hover:scale-105 flex items-center gap-2"
-                      >
-                        <span>Proceed to UPI Payment</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                    )}
+
+                    <div className="bg-white/90 p-5 rounded-xl border border-emerald-200 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Amount Payable Now</p>
+                          <p className="text-2xl font-serif font-bold text-emerald-900">₹{payableAmount.toLocaleString()}</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <button 
+                            type="submit"
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3.5 px-7 rounded-xl shadow-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+                          >
+                            <span>Pay via UPI QR &amp; Confirm</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <span className="text-xs font-medium text-stone-600">
+                          Or send booking message directly:
+                        </span>
+                        <div className="flex flex-wrap gap-2.5">
+                          <button
+                            type="button"
+                            onClick={handleSendBookingWhatsApp}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl shadow-sm flex items-center gap-2 transition-all"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Send on WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSendBookingSMS}
+                            className="bg-amber-700 hover:bg-amber-800 text-white text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl shadow-sm flex items-center gap-2 transition-all"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Send via SMS</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1378,38 +1613,48 @@ export default function App() {
       {/* Payment Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-stone-200 relative overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-stone-200 relative">
             <button 
               onClick={() => setShowPaymentModal(false)}
-              className="absolute top-6 right-6 text-stone-400 hover:text-stone-700 bg-stone-100 p-2 rounded-full transition-colors"
+              className="absolute top-5 right-5 text-stone-400 hover:text-stone-700 bg-stone-100 p-2 rounded-full transition-colors"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-2xl font-serif font-bold text-stone-900 mb-2">Scan & Pay via UPI</h3>
-            <p className="text-stone-600 text-sm mb-6">
-              Scan the QR code using GPay, PhonePe, or Paytm. Pay <strong className="text-emerald-800">₹{payableAmount.toLocaleString()}</strong> and enter your UTR / Transaction ID below.
+            <h3 className="text-2xl font-serif font-bold text-stone-900 mb-2">Step 1: Scan &amp; Pay via UPI</h3>
+            <p className="text-stone-600 text-sm mb-5">
+              Scan this Google Pay / UPI QR code using GPay, PhonePe, or Paytm to pay <strong className="text-emerald-800">₹{payableAmount.toLocaleString()}</strong>. After paying, your booking &amp; payment details will go to the owner and a status message will be ready for the customer.
             </p>
 
-            {/* QR Code Box */}
-            <div className="bg-stone-50 p-6 rounded-2xl border border-stone-200 text-center mb-6 space-y-4">
-              <div className="w-48 h-48 bg-white mx-auto p-4 rounded-xl shadow-inner border border-stone-200 flex flex-col items-center justify-center relative">
-                {/* Simulated clean QR code design */}
-                <div className="w-36 h-36 bg-stone-900 rounded-lg p-2 flex flex-col justify-between text-white text-[10px] items-center justify-center font-mono">
-                  <div className="w-full flex justify-between font-bold text-emerald-400">
-                    <span>[|||] UPI</span>
-                    <span>CYPRUS</span>
-                  </div>
-                  <div className="bg-white text-stone-900 p-2 rounded font-bold text-center w-full">
-                    SCAN WITH ANY UPI APP
-                  </div>
-                  <div className="w-full flex justify-between text-[8px] text-stone-300">
-                    <span>GPay</span>
-                    <span>PhonePe</span>
-                    <span>Paytm</span>
-                  </div>
-                </div>
+            {/* Real Uploaded QR Code Box */}
+            <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200 text-center mb-5 space-y-4">
+              <div className="w-56 h-56 sm:w-64 sm:h-64 bg-white mx-auto p-2.5 rounded-2xl shadow-md border border-stone-200 flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/assets/aistudio/WhatsApp_Image_2026-11-13_at_10.10.00_AM_efe976a6.jpeg" 
+                  alt="Cyprus Homestay UPI Payment QR Code" 
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              </div>
+              <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
+                Scan with GPay / PhonePe / Paytm
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <a
+                  href="/assets/aistudio/WhatsApp_Image_2026-11-13_at_10.10.00_AM_efe976a6.jpeg"
+                  download="cyprus-homestay-payment-qr.jpeg"
+                  className="bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 px-3 py-1.5 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Save QR</span>
+                </a>
+                <a
+                  href={`upi://pay?pa=cyprushomestay@upi&pn=Cyprus%20Homestay&am=${payableAmount}&cu=INR`}
+                  className="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <span>Pay ₹{payableAmount.toLocaleString()} in UPI App</span>
+                </a>
               </div>
 
               <div>
@@ -1419,6 +1664,7 @@ export default function App() {
                     cyprushomestay@upi
                   </code>
                   <button 
+                    type="button"
                     onClick={handleCopyUpi}
                     className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
                   >
@@ -1429,46 +1675,22 @@ export default function App() {
               </div>
             </div>
 
-            {/* Verification Inputs */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  12-Digit UPI Transaction ID / UTR Number *
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. 426189237192"
-                  value={utrNumber}
-                  onChange={(e) => setUtrNumber(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 font-mono text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Upload Payment Screenshot (Optional)
-                </label>
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setPaymentScreenshot(e.target.files[0].name);
-                    }
-                  }}
-                  className="w-full text-sm text-stone-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
-                />
-                {paymentScreenshot && (
-                  <p className="text-xs text-emerald-700 mt-1">Attached: {paymentScreenshot}</p>
-                )}
-              </div>
-
+            {/* Post-Payment Submission Actions */}
+            <div className="space-y-3">
               <button 
-                onClick={handleSubmitFinalBooking}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-4 rounded-xl shadow-lg transition-all hover:scale-[1.01] mt-4"
+                type="button"
+                onClick={() => handleDirectBookingConfirm('qr')}
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-4 rounded-xl shadow-lg transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
               >
-                Submit Pre-Booking & Verify Payment
+                <CheckCircle className="w-5 h-5" />
+                <span>I Have Paid — Send Details to Owner &amp; Customer</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleDirectBookingConfirm('direct')}
+                className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold py-3 rounded-xl transition-all text-sm"
+              >
+                Pay at Homestay (Send Request to Owner)
               </button>
             </div>
           </div>
